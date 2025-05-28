@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSVP Text Reader</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="container">
+        <h1>RSVP Text Reader</h1>
+        <textarea id="textInput" placeholder="Paste your text here..."></textarea>
+        <div class="controls">
+            <p>Press <strong>Space</strong> to Start/Stop.</p>
+            <p>Press <strong>Left Arrow</strong> to go to previous line/start of line.</p>
+            <p>Press <strong>Right Arrow</strong> to go to next line.</p>
+            <p>Press <strong>Up Arrow</strong> to increase reading speed by 25 WPM.</p>
+            <p>Press <strong>Down Arrow</strong> to decrease reading speed by 25 WPM.</p>
+            <p>Rate: <input type="number" id="wpmInput" value="300" min="50" max="1000"> WPM</p>
+            <p id="estimatedTime">Estimated reading time: --</p>
+        </div>
+        <button id="processButton">Read Text</button>
+    </div>
+
+    <div id="rsvpDisplay">
+        <span id="rsvpText"></span>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
