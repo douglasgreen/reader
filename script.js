@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateEstimatedTime() {
         const rawText = textInput.value;
+
         // Use the synchronized wordsPerMinute variable for calculation
         const currentWPM = wordsPerMinute;
         const totalWords = countTotalWords(rawText);
@@ -98,6 +99,21 @@ document.addEventListener('DOMContentLoaded', () => {
             timeString += `${seconds} sec`;
         }
         estimatedTimeElement.textContent = timeString.trim();
+    }
+
+    function recommendReadingSpeed() {
+        const rawText = textInput.value.trim();
+        if (rawText.length < 1000) {
+            return;
+        }
+
+        const score = calculateFleschReadingEase(rawText);
+        console.log(`Flesch Reading Ease score: ${score}`);
+
+        // If 50 is the average score, increase reading speed when above average.
+        const adjusted = 300 * score / 50;
+        const recommended = Math.round(adjusted / 25) * 25;
+        console.log(`Recommended reading speed: ${recommended} WPM`);
     }
 
     function chunkLine(line) {
@@ -280,7 +296,10 @@ document.addEventListener('DOMContentLoaded', () => {
         startReading();
     });
 
-    textInput.addEventListener('input', updateEstimatedTime);
+    textInput.addEventListener('input', () => {
+        updateEstimatedTime();
+        recommendReadingSpeed();
+    });
 
     wpmInput.addEventListener('change', () => {
         // Let updateWPMValue handle parsing, clamping, and side effects
@@ -325,6 +344,41 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    function calculateFleschReadingEase(text) {
+        // Helper function to count syllables in a word
+        function countSyllables(word) {
+            word = word.toLowerCase();
+            if (word.length <= 3) return 1;
+            word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
+            word = word.replace(/^y/, '');
+            const syllableMatches = word.match(/[aeiouy]{1,2}/g);
+            return syllableMatches ? syllableMatches.length : 1;
+        }
+
+        // Split text into sentences
+        const sentences = text.split(/[.!?]+/).filter(Boolean);
+        const totalSentences = sentences.length || 1;
+
+        // Split text into words
+        const words = text.match(/\b\w+\b/g) || [];
+        const totalWords = words.length || 1;
+
+        // Count total syllables
+        let totalSyllables = 0;
+        for (const word of words) {
+            totalSyllables += countSyllables(word);
+        }
+
+        // Calculate FRE score
+        const freScore =
+            206.835 -
+            1.015 * (totalWords / totalSentences) -
+            84.6 * (totalSyllables / totalWords);
+
+        return freScore.toFixed(2);
+    }
+
 
     // --- Initial Setup ---
     updateRsvpDisplay("[Enter text and press 'Prepare Text' or Space]");
