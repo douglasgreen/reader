@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Configuration Constants
     const MAX_CHUNK_LENGTH = 19; // Less than 20 characters per chunk
     const DELAY_BETWEEN_LINES = 1000; // Extra milliseconds delay between lines
-    const DEFAULT_WPM = 300;
+    const DEFAULT_WPM = 400;
     const MIN_WPM_LIMIT = 50;  // Sensible minimum WPM
     const MAX_WPM_LIMIT = 2000; // Sensible maximum WPM
     const WPM_STEP = 25;      // Increment/decrement value for WPM
@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     function calculateDelayPerLetter() {
-        if (wordsPerMinute <= 0) return 300; // Default if WPM is invalid
+        if (wordsPerMinute <= 0) return 400; // Default if WPM is invalid
         const delayPerWord = (60 * 1000) / wordsPerMinute;
 
         // Assume 5 letters in a word plus a space
@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Flesch Reading Ease score: ${score}`);
 
         // If 50 is the average score, increase reading speed when above average.
-        const adjusted = 300 * score / 50;
+        const adjusted = 400 * score / 50;
         const recommended = Math.round(adjusted / 25) * 25;
         console.log(`Recommended reading speed: ${recommended} WPM`);
     }
