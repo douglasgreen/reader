@@ -3028,7 +3028,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Flesch Reading Ease score: ${score}`);
 
         // If 50 is the average score, increase reading speed when above average.
-        const adjusted = 4.75 * score + 196;
+        const adjusted = 5.6 * score + 220;
         const recommended = Math.round(adjusted / 25) * 25;
         console.log(`Recommended reading speed: ${recommended} WPM`);
     }
