@@ -3132,15 +3132,29 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add extra time for punctuation.
         if (/[.?!]/.test(chunk)) weight += 5;
         if (/[,;:]/.test(chunk)) weight += 3;
-        if (/[A-Z]/.test(chunk)) weight += 2;
 
-        // Add extra time for names when first encountered.
-        const words = chunk.match(/\b[a-zA-Z]+\b/g) || [];
+        const words = chunk.match(/\b[a-zA-Z0-9]+\b/g) || [];
         for (const word of words) {
             const lowWord = word.toLowerCase();
-            if (word != lowWord && !daleChallWords.has(lowWord)) {
-                console.log(word);
+
+            // Skip common words.
+            if (daleChallWords.has(lowWord)) {
+                continue;
+            }
+
+            // Add extra time for numbers proportional to length.
+            if (/[0-9]/.test(word)) {
                 weight += word.length;
+            } else {
+                // Add extra time for rare words and names proportional to syllable count.
+                let wordWeight = countSyllables(word);
+
+                // Add extra time for proper names.
+                if (lowWord != word) {
+                    wordWeight *= 2;
+                }
+
+                weight += wordWeight;
             }
         }
 
@@ -3275,17 +3289,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    function calculateFleschReadingEase(text) {
-        // Helper function to count syllables in a word
-        function countSyllables(word) {
-            word = word.toLowerCase();
-            if (word.length <= 3) return 1;
-            word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
-            word = word.replace(/^y/, '');
-            const syllableMatches = word.match(/[aeiouy]{1,2}/g);
-            return syllableMatches ? syllableMatches.length : 1;
-        }
+    // Helper function to count syllables in a word
+    function countSyllables(word) {
+        word = word.toLowerCase();
+        if (word.length <= 3) return 1;
+        word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
+        word = word.replace(/^y/, '');
+        const syllableMatches = word.match(/[aeiouy]{1,2}/g);
+        return syllableMatches ? syllableMatches.length : 1;
+    }
 
+
+    function calculateFleschReadingEase(text) {
         // Split text into sentences
         const sentences = text.split(/[.!?]+/).filter(Boolean);
         const totalSentences = sentences.length || 1;
@@ -3308,7 +3323,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return freScore.toFixed(2);
     }
-
 
     // --- Initial Setup ---
     updateRsvpDisplay("[Enter text and press 'Prepare Text' or Space]");
