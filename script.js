@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function recommendReadingSpeed() {
         const rawText = textInput.value.trim();
-        if (rawText.length < 1000) {
+        if (rawText.length < 100) {
             return;
         }
 
@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Flesch Reading Ease score: ${score}`);
 
         // If 50 is the average score, increase reading speed when above average.
-        const adjusted = 400 * score / 50;
+        const adjusted = 4.75 * score + 196;
         const recommended = Math.round(adjusted / 25) * 25;
         console.log(`Recommended reading speed: ${recommended} WPM`);
     }
