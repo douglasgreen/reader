@@ -1,4 +1,15 @@
-let daleChallWords = new Set([
+// Configuration Constants (centralized and immutable)
+const CONFIG = Object.freeze({
+  API_BASE_URL: '/api/v1',  // Placeholder; not used in current code but prepared
+  MAX_CHUNK_LENGTH: 19,
+  DELAY_BETWEEN_LINES: 1000,
+  DEFAULT_WPM: 400,
+  MIN_WPM_LIMIT: 50,
+  MAX_WPM_LIMIT: 2000,
+  WPM_STEP: 25
+});
+
+const DALE_CHALL_WORDS = new Set([
     'a',
     'able',
     'aboard',
@@ -2915,419 +2926,407 @@ let daleChallWords = new Set([
     'youth'
 ]);
 
+/**
+ * Calculates the delay per character based on WPM.
+ * @param {number} wordsPerMinute - Words per minute.
+ * @returns {number} Delay in milliseconds per character.
+ * @throws {TypeError} If WPM is invalid.
+ */
+function calculateDelayPerCharacter(wordsPerMinute) {
+  if (typeof wordsPerMinute !== 'number' || wordsPerMinute <= 0) {
+    throw new TypeError('wordsPerMinute must be a positive number');
+  }
+  const delayPerWord = (60 * 1000) / wordsPerMinute;
+  return delayPerWord / 6;  // Assumes average 5 letters + space
+}
+
+/**
+ * Counts total words in text.
+ * @param {string} text - The input text.
+ * @returns {number} Total word count.
+ */
+function countTotalWords(text) {
+  if (!text || text.trim() === '') return 0;
+  return text.split(/\s+/).filter(word => word.length > 0).length;
+}
+
+/**
+ * Updates the estimated reading time display.
+ * @param {number} totalWords - Total words in the text.
+ * @param {number} wordsPerMinute - Current WPM.
+ * @param {HTMLElement} element - DOM element to update.
+ */
+function updateEstimatedTime(totalWords, wordsPerMinute, element) {
+  if (totalWords === 0 || wordsPerMinute <= 0) {
+    element.textContent = 'Estimated reading time: --';
+    return;
+  }
+  const timeInMinutes = totalWords / wordsPerMinute;
+  const totalSeconds = Math.round(timeInMinutes * 60);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  let timeString = 'Estimated reading time: ';
+  if (minutes > 0) timeString += `${minutes} min `;
+  if (seconds > 0 || minutes === 0) timeString += `${seconds} sec`;
+  element.textContent = timeString.trim();
+}
+
+/**
+ * Calculates Flesch Reading Ease score.
+ * @param {string} text - The text to analyze.
+ * @returns {string} Score as a string.
+ */
+function calculateFleschReadingEase(text) {
+  const sentences = text.split(/[.!?]+/).filter(Boolean);
+  const totalSentences = sentences.length || 1;
+  const words = text.match(/\b\w+\b/g) || [];
+  const totalWords = words.length || 1;
+  let totalSyllables = 0;
+  for (const word of words) {
+    totalSyllables += countSyllables(word);
+  }
+  const freScore = 206.835 - 1.015 * (totalWords / totalSentences) - 84.6 * (totalSyllables / totalWords);
+  return freScore.toFixed(2);
+}
+
+/**
+ * Recommends reading speed based on Flesch score (logs to console).
+ * @param {string} text - The text.
+ * @param {number} score - Flesch score.
+ */
+function recommendReadingSpeed(text, score) {
+  if (text.length < 100) return;
+  console.log(`Flesch Reading Ease score: ${score}`);
+  const adjusted = 5.6 * parseFloat(score) + 220;
+  const recommended = Math.round(adjusted / CONFIG.WPM_STEP) * CONFIG.WPM_STEP;
+  console.log(`Recommended reading speed: ${recommended} WPM`);
+}
+
+/**
+ * Chunks a line into smaller parts based on max length.
+ * @param {string} line - The input line.
+ * @param {number} maxLength - Max characters per chunk.
+ * @returns {Array<string>} Array of chunks.
+ */
+function chunkLine(line, maxLength = CONFIG.MAX_CHUNK_LENGTH) {
+  if (!line.trim()) return [];
+  const words = line.split(/\s+/).filter(word => word.length > 0);
+  const chunks = [];
+  let currentChunk = '';
+  for (const word of words) {
+    if (currentChunk.length === 0) {
+      currentChunk = word;
+    } else if (currentChunk.length + 1 + word.length <= maxLength) {
+      currentChunk += ` ${word}`;
+    } else {
+      chunks.push(currentChunk);
+      currentChunk = word;
+    }
+  }
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+  return chunks;
+}
+
+/**
+ * Processes text into lines of chunks.
+ * @param {string} rawText - The full text.
+ * @returns {Array<Array<string>>} Array of lines, each with chunks.
+ */
+function processText(rawText) {
+  const lines = rawText.split('\n');
+  return lines.map(line => chunkLine(line)).filter(chunks => chunks.length > 0);
+}
+
+// Memoized syllable counter for performance
+const syllableCache = new Map();
+
+/**
+ * Counts syllables in a word.
+ * @param {string} word - The word.
+ * @returns {number} Syllable count.
+ */
+function countSyllables(word) {
+  if (syllableCache.has(word)) return syllableCache.get(word);
+  word = word.toLowerCase();
+  if (word.length <= 3) {
+    syllableCache.set(word, 1);
+    return 1;
+  }
+  word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
+  word = word.replace(/^y/, '');
+  const syllableMatches = word.match(/[aeiouy]{1,2}/g);
+  const count = syllableMatches ? syllableMatches.length : 1;
+  syllableCache.set(word, count);
+  return count;
+}
+// State class for managing application state immutably
+class ReadingState {
+  constructor(processedLines = [], lineIndex = 0, chunkIndex = 0, isPlaying = false) {
+    this.processedLines = [...processedLines];
+    this.lineIndex = lineIndex;
+    this.chunkIndex = chunkIndex;
+    this.isPlaying = isPlaying;
+  }
+
+  static updateChunkIndex(newState, increment = true) {
+    const delta = increment ? 1 : -1;
+    const newIndex = newState.chunkIndex + delta;
+    if (newIndex < 0) return newState;  // Prevent negative
+    return new ReadingState(newState.processedLines, newState.lineIndex, newIndex, newState.isPlaying);
+  }
+
+  static updateLineIndex(newState, increment = true) {
+    const delta = increment ? 1 : -1;
+    const newIndex = newState.lineIndex + delta;
+    if (newIndex < 0 || newIndex >= newState.processedLines.length) return newState;  // Bounds check
+    return new ReadingState(newState.processedLines, newIndex, 0, newState.isPlaying);
+  }
+
+  static setPlaying(newState, isPlaying) {
+    return new ReadingState(newState.processedLines, newState.lineIndex, newState.chunkIndex, isPlaying);
+  }
+}
+
+// Handler class for DOM interactions and logic
+class RsvpApp {
+  constructor() {
+    this.state = new ReadingState();
+    this.timerId = null;
+    this.wordsPerMinute = CONFIG.DEFAULT_WPM;
+    this.elements = this.initializeElements();
+    this.bindEvents();
+    this.setupInitialDisplay();
+  }
+
+  initializeElements() {
+    try {
+      return {
+        textInput: document.getElementById('textInput'),
+        processButton: document.getElementById('processButton'),
+        rsvpDisplay: document.getElementById('rsvpDisplay'),
+        rsvpText: document.getElementById('rsvpText'),
+        wpmInput: document.getElementById('wpmInput'),
+        estimatedTime: document.getElementById('estimatedTime'),
+        container: document.querySelector('.container')  // Assume class exists
+      };
+    } catch (error) {
+      console.error('Error initializing DOM elements:', error);
+      throw new Error('Required DOM elements not found');
+    }
+  }
+
+  bindEvents() {
+    this.elements.processButton.addEventListener('click', () => this.processAndStart());
+    this.elements.textInput.addEventListener('input', () => this.onTextInput());
+    this.elements.wpmInput.addEventListener('change', () => this.updateWpm());
+    document.addEventListener('keydown', (event) => this.handleKeydown(event));
+  }
+
+  setupInitialDisplay() {
+    this.elements.rsvpText.textContent = '[Enter text and press "Prepare Text" or Space]';
+    this.validateAndSetWpm(CONFIG.DEFAULT_WPM);
+  }
+
+  onTextInput() {
+    this.updateEstimatedTime();
+    const score = calculateFleschReadingEase(this.elements.textInput.value);
+    recommendReadingSpeed(this.elements.textInput.value, score);
+  }
+
+  updateWpm() {
+    const newWpm = parseInt(this.elements.wpmInput.value, 10);
+    this.validateAndSetWpm(newWpm);
+  }
+
+  validateAndSetWpm(newWpm) {
+    const clampedWpm = Math.max(CONFIG.MIN_WPM_LIMIT, Math.min(newWpm || this.wordsPerMinute, CONFIG.MAX_WPM_LIMIT));
+    if (clampedWpm !== this.wordsPerMinute || this.elements.wpmInput.value !== '' + clampedWpm) {
+      this.wordsPerMinute = clampedWpm;
+      this.elements.wpmInput.value = '' + clampedWpm;
+      this.updateEstimatedTime();
+      console.log('WPM set to:', this.wordsPerMinute);
+      if (this.state.isPlaying) {
+        this.stopReading();
+        this.startReading();
+      }
+    }
+  }
+
+  updateEstimatedTime() {
+    const totalWords = countTotalWords(this.elements.textInput.value);
+    updateEstimatedTime(totalWords, this.wordsPerMinute, this.elements.estimatedTime);
+  }
+
+  processAndStart() {
+    const processed = processText(this.elements.textInput.value);
+    this.state = new ReadingState(processed, 0, 0, false);
+    this.displayChunk();
+    this.startReading();
+  }
+
+  displayChunk() {
+    if (this.state.processedLines.length === 0) {
+      this.elements.rsvpText.textContent = '[No text processed]';
+      this.toggleVisibility(false);
+      return;
+    }
+    if (this.state.lineIndex >= this.state.processedLines.length) {
+      this.elements.rsvpText.textContent = '[End of Text]';
+      this.toggleVisibility(false);
+      return;
+    }
+    const currentChunks = this.state.processedLines[this.state.lineIndex];
+    const chunk = currentChunks[this.state.chunkIndex] || '[Invalid Chunk]';
+    this.elements.rsvpText.textContent = chunk;
+    this.toggleVisibility(true);
+  }
+
+  toggleVisibility(isVisible) {
+    const { rsvpDisplay, container } = this.elements;
+    if (isVisible) {
+      rsvpDisplay.classList.add('visible');
+      container.classList.add('invisible');
+    } else {
+      rsvpDisplay.classList.remove('visible');
+      container.classList.remove('invisible');
+    }
+  }
+
+  startReading() {
+    if (this.state.isPlaying || this.state.processedLines.length === 0) return;
+    this.state = ReadingState.setPlaying(this.state, true);
+    this.playNextChunk();
+  }
+
+  stopReading() {
+    this.state = ReadingState.setPlaying(this.state, false);
+    if (this.timerId) {
+      clearTimeout(this.timerId);
+      this.timerId = null;
+    }
+    const percentDone = (this.state.lineIndex / this.state.processedLines.length) * 100;
+    console.log(`${percentDone.toFixed(1)}% done`);
+  }
+
+  playNextChunk() {
+    if (!this.state.isPlaying) return;
+    if (this.state.lineIndex >= this.state.processedLines.length) {
+      this.elements.rsvpText.textContent = '[End of Text]';
+      this.stopReading();
+      return;
+    }
+    const currentLine = this.state.processedLines[this.state.lineIndex];
+    if (this.state.chunkIndex >= currentLine.length) {
+      this.state = ReadingState.updateLineIndex(this.state, true);
+      this.state = ReadingState.setPlaying(this.state, false);  // Pausing for line delay
+      this.timerId = setTimeout(() => {
+        this.state = ReadingState.setPlaying(this.state, true);
+        this.playNextChunk();
+      }, CONFIG.DELAY_BETWEEN_LINES);
+      return;
+    }
+    const chunk = currentLine[this.state.chunkIndex];
+    this.elements.rsvpText.textContent = chunk;
+    const weight = this.calculateWeight(chunk);
+    const delay = weight * calculateDelayPerCharacter(this.wordsPerMinute);
+    this.state = ReadingState.updateChunkIndex(this.state, true);
+    this.timerId = setTimeout(() => this.playNextChunk(), delay);
+  }
+
+  calculateWeight(chunk) {
+    let weight = chunk.length;
+    if (/[.?!]/.test(chunk)) weight += 5;
+    if (/[,;:]/.test(chunk)) weight += 3;
+    const words = chunk.match(/\b[a-zA-Z0-9]+\b/g) || [];
+    for (const word of words) {
+      const lowWord = word.toLowerCase();
+      if (DALE_CHALL_WORDS.has(lowWord)) continue;
+      if (/[0-9]/.test(word)) {
+        weight += word.length;
+      } else {
+        let wordWeight = countSyllables(word);
+        if (lowWord !== word) wordWeight *= 2;
+        weight += wordWeight;
+      }
+    }
+    return weight;
+  }
+
+  navigateBackward() {
+    this.stopReading();
+    if (this.state.chunkIndex > 0) {
+      this.state = ReadingState.updateChunkIndex(this.state, false);
+    } else if (this.state.lineIndex > 0) {
+      this.state = ReadingState.updateLineIndex(this.state, false);
+    }
+    this.displayChunk();
+  }
+
+  navigateForward() {
+    this.stopReading();
+    if (this.state.lineIndex < this.state.processedLines.length - 1) {
+      this.state = ReadingState.updateLineIndex(this.state, true);
+    } else {
+      const lastLine = this.state.processedLines[this.state.lineIndex];
+      this.state = ReadingState.updateChunkIndex(new ReadingState(
+        this.state.processedLines, this.state.lineIndex, Math.max(lastLine.length - 1, 0), this.state.isPlaying
+      ), false);  // Don't increment, just set to last
+    }
+    this.displayChunk();
+  }
+
+  handleKeydown(event) {
+    const isInputFocused = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName);
+    if (event.key === ' ') {
+      if (!isInputFocused || this.elements.rsvpDisplay.classList.contains('visible')) {
+        event.preventDefault();
+        this.togglePlayPause();
+      }
+    } else if (event.key === 'ArrowLeft') {
+      if (!isInputFocused || this.elements.rsvpDisplay.classList.contains('visible')) {
+        event.preventDefault();
+        this.navigateBackward();
+      }
+    } else if (event.key === 'ArrowRight') {
+      if (!isInputFocused || this.elements.rsvpDisplay.classList.contains('visible')) {
+        event.preventDefault();
+        this.navigateForward();
+      }
+    } else if (event.key === 'ArrowUp') {
+      if (!isInputFocused || this.elements.rsvpDisplay.classList.contains('visible')) {
+        event.preventDefault();
+        this.updateWpmValue(+CONFIG.WPM_STEP);
+      }
+    } else if (event.key === 'ArrowDown') {
+      if (!isInputFocused || this.elements.rsvpDisplay.classList.contains('visible')) {
+        event.preventDefault();
+        this.updateWpmValue(-CONFIG.WPM_STEP);
+      }
+    } else if (event.key === 'Escape') {
+      if (this.elements.rsvpDisplay.classList.contains('visible')) {
+        event.preventDefault();
+        this.stopReading();
+        this.toggleVisibility(false);
+      }
+    }
+  }
+
+  togglePlayPause() {
+    if (this.state.isPlaying) {
+      this.stopReading();
+    } else {
+      this.startReading();
+    }
+  }
+
+  updateWpmValue(delta) {
+    this.validateAndSetWpm(this.wordsPerMinute + delta);
+  }
+}
+
+// Initialize app on DOM load
 document.addEventListener('DOMContentLoaded', () => {
-    const textInput = document.getElementById('textInput');
-    const processButton = document.getElementById('processButton');
-    const rsvpDisplay = document.getElementById('rsvpDisplay');
-    const rsvpTextElement = document.getElementById('rsvpText');
-    const wpmInput = document.getElementById('wpmInput');
-    const estimatedTimeElement = document.getElementById('estimatedTime');
-
-    // Configuration Constants
-    const MAX_CHUNK_LENGTH = 19; // Less than 20 characters per chunk
-    const DELAY_BETWEEN_LINES = 1000; // Extra milliseconds delay between lines
-    const DEFAULT_WPM = 400;
-    const MIN_WPM_LIMIT = 50;  // Sensible minimum WPM
-    const MAX_WPM_LIMIT = 2000; // Sensible maximum WPM
-    const WPM_STEP = 25;      // Increment/decrement value for WPM
-
-    // State Variables
-    let allProcessedLines = []; // Array of arrays (lines, then chunks within lines)
-    let currentLineIndex = 0;
-    let currentChunkIndex = 0;
-    let isPlaying = false;
-    let timerId = null;
-    let wordsPerMinute = parseInt(wpmInput.value, 10) || DEFAULT_WPM;
-
-    // --- Helper Functions ---
-
-    function updateWPMValue(newPotentialWPM) {
-        let targetWPM = parseInt(newPotentialWPM, 10);
-
-        if (isNaN(targetWPM)) {
-            // If parsing new value fails (e.g., from a cleared input field),
-            // fall back to the current valid wordsPerMinute.
-            targetWPM = wordsPerMinute;
-        }
-
-        const minWPM = parseInt(wpmInput.min, 10) || MIN_WPM_LIMIT;
-        const maxWPM = parseInt(wpmInput.max, 10) || MAX_WPM_LIMIT;
-
-        let clampedWPM = Math.max(minWPM, Math.min(targetWPM, maxWPM));
-
-        // Only proceed if the clamped WPM is different from the current WPM,
-        // OR if the input field's displayed text needs to be corrected to the clamped WPM.
-        if (clampedWPM !== wordsPerMinute || String(wpmInput.value) !== String(clampedWPM)) {
-            wordsPerMinute = clampedWPM;
-            wpmInput.value = String(clampedWPM); // Update the input field text
-
-            console.log("WPM set to:", wordsPerMinute); // Log the new speed
-            updateEstimatedTime(); // Recalculate and display estimated time
-
-            if (isPlaying) {
-                stopReading();
-                startReading(); // startReading will use the updated wordsPerMinute (via wpmInput.value)
-            }
-        }
-    }
-
-
-    function calculateDelayPerLetter() {
-        if (wordsPerMinute <= 0) return 400; // Default if WPM is invalid
-        const delayPerWord = (60 * 1000) / wordsPerMinute;
-
-        // Assume 5 letters in a word plus a space
-        return delayPerWord / 6;
-    }
-
-    function countTotalWords(text) {
-        if (!text || text.trim() === "") return 0;
-        return text.split(/\s+/).filter(word => word.length > 0).length;
-    }
-
-    function updateEstimatedTime() {
-        const rawText = textInput.value;
-
-        // Use the synchronized wordsPerMinute variable for calculation
-        const currentWPM = wordsPerMinute;
-        const totalWords = countTotalWords(rawText);
-
-        if (totalWords === 0 || currentWPM <= 0) {
-            estimatedTimeElement.textContent = "Estimated reading time: --";
-            return;
-        }
-
-        const timeInMinutes = totalWords / currentWPM;
-        const totalSeconds = Math.round(timeInMinutes * 60);
-
-        if (totalSeconds === 0 && totalWords > 0) {
-             estimatedTimeElement.textContent = "Estimated reading time: < 1 sec";
-             return;
-        }
-
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-
-        let timeString = "Estimated reading time: ";
-        if (minutes > 0) {
-            timeString += `${minutes} min `;
-        }
-        if (seconds > 0 || minutes === 0) {
-            timeString += `${seconds} sec`;
-        }
-        estimatedTimeElement.textContent = timeString.trim();
-    }
-
-    function recommendReadingSpeed() {
-        const rawText = textInput.value.trim();
-        if (rawText.length < 100) {
-            return;
-        }
-
-        const score = calculateFleschReadingEase(rawText);
-        console.log(`Flesch Reading Ease score: ${score}`);
-
-        // If 50 is the average score, increase reading speed when above average.
-        const adjusted = 5.6 * score + 220;
-        const recommended = Math.round(adjusted / 25) * 25;
-        console.log(`Recommended reading speed: ${recommended} WPM`);
-    }
-
-    function chunkLine(line) {
-        if (!line.trim()) return [];
-        const words = line.split(/\s+/).filter(word => word.length > 0);
-        const chunks = [];
-        let currentChunk = "";
-        for (const word of words) {
-            if (currentChunk.length === 0) {
-                currentChunk = word;
-            } else if (currentChunk.length + 1 + word.length <= MAX_CHUNK_LENGTH) {
-                currentChunk += " " + word;
-            } else {
-                chunks.push(currentChunk);
-                currentChunk = word;
-            }
-        }
-        if (currentChunk.length > 0) {
-            chunks.push(currentChunk);
-        }
-        return chunks;
-    }
-
-    function processText() {
-        const rawText = textInput.value;
-        const lines = rawText.split('\n');
-        allProcessedLines = lines.map(line => chunkLine(line)).filter(chunks => chunks.length > 0);
-        currentLineIndex = 0;
-        currentChunkIndex = 0;
-        if (allProcessedLines.length > 0) {
-            updateRsvpDisplay(allProcessedLines[0][0] || "[Start]");
-            rsvpDisplay.classList.add('visible');
-            container.classList.add("invisible");
-        } else {
-            updateRsvpDisplay("[No text processed]");
-            rsvpDisplay.classList.remove('visible');
-            container.classList.remove('invisible');
-        }
-        stopReading();
-        updateEstimatedTime();
-    }
-
-    function updateRsvpDisplay(text) {
-        rsvpTextElement.textContent = text;
-    }
-
-    function showCurrentPointer() {
-        if (allProcessedLines.length === 0 || currentLineIndex >= allProcessedLines.length) {
-            updateRsvpDisplay("[End of Text]");
-            rsvpDisplay.classList.remove('visible');
-            container.classList.remove('invisible');
-            return;
-        }
-        const line = allProcessedLines[currentLineIndex];
-        if (!line || currentChunkIndex >= line.length) {
-            updateRsvpDisplay("[End of Line]"); // Should ideally not happen if logic is correct
-            return;
-        }
-        updateRsvpDisplay(line[currentChunkIndex]);
-        if (!rsvpDisplay.classList.contains('visible')) {
-            rsvpDisplay.classList.add('visible');
-        }
-        if (!container.classList.contains('invisible')) {
-            container.classList.add('invisible');
-        }
-    }
-
-    function playNextChunk() {
-        if (!isPlaying || allProcessedLines.length === 0) {
-            stopReading();
-            if(allProcessedLines.length === 0 && textInput.value.trim() !== "") processButton.click();
-            else if (allProcessedLines.length === 0) updateRsvpDisplay("[Enter Text]");
-            return;
-        }
-
-        if (currentLineIndex >= allProcessedLines.length) {
-            updateRsvpDisplay("[End of Text]");
-            stopReading();
-            return;
-        }
-
-        const currentLine = allProcessedLines[currentLineIndex];
-        if (currentChunkIndex >= currentLine.length) {
-            currentLineIndex++;
-            currentChunkIndex = 0;
-            if (currentLineIndex >= allProcessedLines.length) {
-                updateRsvpDisplay("[End of Text]");
-                stopReading();
-                return;
-            }
-            timerId = setTimeout(playNextChunk, DELAY_BETWEEN_LINES);
-            return;
-        }
-
-        const chunk = currentLine[currentChunkIndex];
-        updateRsvpDisplay(chunk);
-        let weight = chunk.length;
-
-        // Add extra time for punctuation.
-        if (/[.?!]/.test(chunk)) weight += 5;
-        if (/[,;:]/.test(chunk)) weight += 3;
-
-        const words = chunk.match(/\b[a-zA-Z0-9]+\b/g) || [];
-        for (const word of words) {
-            const lowWord = word.toLowerCase();
-
-            // Skip common words.
-            if (daleChallWords.has(lowWord)) {
-                continue;
-            }
-
-            // Add extra time for numbers proportional to length.
-            if (/[0-9]/.test(word)) {
-                weight += word.length;
-            } else {
-                // Add extra time for rare words and names proportional to syllable count.
-                let wordWeight = countSyllables(word);
-
-                // Add extra time for proper names.
-                if (lowWord != word) {
-                    wordWeight *= 2;
-                }
-
-                weight += wordWeight;
-            }
-        }
-
-        let delay = weight * calculateDelayPerLetter();
-        currentChunkIndex++;
-        timerId = setTimeout(playNextChunk, delay);
-    }
-
-    function startReading() {
-        if (isPlaying) return;
-        if (allProcessedLines.length === 0) {
-            processText();
-            if (allProcessedLines.length === 0) {
-                 updateRsvpDisplay("[No text to read]");
-                 setTimeout(() => {
-                     if (!isPlaying) {
-                         rsvpDisplay.classList.remove('visible');
-                         container.classList.remove('invisible');
-                     }
-                 }, 1500);
-                 return;
-            }
-        }
-        isPlaying = true;
-        rsvpDisplay.classList.add('visible');
-        container.classList.add('invisible');
-
-        // Ensure wordsPerMinute is current, reading from the input (which updateWPMValue keeps synced)
-        wordsPerMinute = parseInt(wpmInput.value, 10) || DEFAULT_WPM;
-        playNextChunk();
-    }
-
-    function stopReading() {
-        isPlaying = false;
-        if (timerId) {
-            clearTimeout(timerId);
-            timerId = null;
-        }
-        const percentDone = currentLineIndex / allProcessedLines.length * 100;
-        console.log(percentDone.toFixed(1) + "% done");
-    }
-
-    function togglePlayPause() {
-        if (isPlaying) {
-            stopReading();
-        } else {
-            startReading();
-        }
-    }
-
-    function navigateBackward() { // Go to start of current line, or start of previous line
-        stopReading();
-        if (allProcessedLines.length === 0) return;
-
-        if (currentChunkIndex > 0) { // If not at the start of a line
-            currentChunkIndex = 0;    // Go to start of current line
-        } else if (currentLineIndex > 0) { // If at start of a line, and not the first line
-            currentLineIndex--;         // Go to previous line
-            currentChunkIndex = 0;    // At its start
-        } else { // At start of first line
-            currentChunkIndex = 0;
-        }
-        showCurrentPointer();
-    }
-
-    function navigateForward() { // Go to start of next line
-        stopReading();
-        if (allProcessedLines.length === 0) return;
-
-        if (currentLineIndex < allProcessedLines.length - 1) {
-            currentLineIndex++;
-            currentChunkIndex = 0;
-        } else { // On the last line, go to its end or stay at start if already there
-            const currentFullLine = allProcessedLines[currentLineIndex];
-            currentChunkIndex = currentFullLine.length > 0 ? currentFullLine.length -1 : 0;
-        }
-        showCurrentPointer();
-    }
-
-    // --- Event Listeners ---
-    processButton.addEventListener('click', () => {
-        processText();
-        startReading();
-    });
-
-    textInput.addEventListener('input', () => {
-        updateEstimatedTime();
-        recommendReadingSpeed();
-    });
-
-    wpmInput.addEventListener('change', () => {
-        // Let updateWPMValue handle parsing, clamping, and side effects
-        updateWPMValue(parseInt(wpmInput.value, 10));
-    });
-
-    document.addEventListener('keydown', (event) => {
-        const activeElement = document.activeElement;
-        const isInputFocused = activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA';
-
-        if (event.key === ' ') {
-            if (!isInputFocused || rsvpDisplay.classList.contains('visible')) {
-                 event.preventDefault();
-                 togglePlayPause();
-            }
-        } else if (event.key === 'ArrowLeft') {
-             if (!isInputFocused || rsvpDisplay.classList.contains('visible')) {
-                event.preventDefault();
-                navigateBackward();
-            }
-        } else if (event.key === 'ArrowRight') {
-             if (!isInputFocused || rsvpDisplay.classList.contains('visible')) {
-                event.preventDefault();
-                navigateForward();
-            }
-        } else if (event.key === 'ArrowUp') { // New feature: Increase WPM
-            if (!isInputFocused || rsvpDisplay.classList.contains('visible')) {
-                event.preventDefault();
-                updateWPMValue(wordsPerMinute + WPM_STEP);
-            }
-        } else if (event.key === 'ArrowDown') { // New feature: Decrease WPM
-            if (!isInputFocused || rsvpDisplay.classList.contains('visible')) {
-                event.preventDefault();
-                updateWPMValue(wordsPerMinute - WPM_STEP);
-            }
-        } else if (event.key === 'Escape') {
-            if (rsvpDisplay.classList.contains('visible')) {
-                event.preventDefault();
-                stopReading();
-                rsvpDisplay.classList.remove('visible');
-                container.classList.remove('invisible');
-            }
-        }
-    });
-
-    // Helper function to count syllables in a word
-    function countSyllables(word) {
-        word = word.toLowerCase();
-        if (word.length <= 3) return 1;
-        word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
-        word = word.replace(/^y/, '');
-        const syllableMatches = word.match(/[aeiouy]{1,2}/g);
-        return syllableMatches ? syllableMatches.length : 1;
-    }
-
-
-    function calculateFleschReadingEase(text) {
-        // Split text into sentences
-        const sentences = text.split(/[.!?]+/).filter(Boolean);
-        const totalSentences = sentences.length || 1;
-
-        // Split text into words
-        const words = text.match(/\b\w+\b/g) || [];
-        const totalWords = words.length || 1;
-
-        // Count total syllables
-        let totalSyllables = 0;
-        for (const word of words) {
-            totalSyllables += countSyllables(word);
-        }
-
-        // Calculate FRE score
-        const freScore =
-            206.835 -
-            1.015 * (totalWords / totalSentences) -
-            84.6 * (totalSyllables / totalWords);
-
-        return freScore.toFixed(2);
-    }
-
-    // --- Initial Setup ---
-    updateRsvpDisplay("[Enter text and press 'Prepare Text' or Space]");
-    // Sanitize initial WPM value from input and sync input field display
-    updateWPMValue(wordsPerMinute); // This will clamp if needed and update dependent states
-    // Initial call to estimate time based on current (possibly clamped) WPM
-    updateEstimatedTime();
+  new RsvpApp();
 });
