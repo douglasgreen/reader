@@ -3100,6 +3100,7 @@ class RsvpApp {
     this.setupInitialDisplay();
   }
 
+
   initializeElements() {
     try {
       return {
@@ -3109,7 +3110,7 @@ class RsvpApp {
         rsvpText: document.getElementById('rsvpText'),
         wpmInput: document.getElementById('wpmInput'),
         estimatedTime: document.getElementById('estimatedTime'),
-        container: document.querySelector('.container')  // Assume class exists
+        container: document.querySelector('.custom-app-container')  // Updated to match new class
       };
     } catch (error) {
       console.error('Error initializing DOM elements:', error);

@@ -1,103 +1,37 @@
-body {
-    font-family: sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: #f4f4f4;
-    color: #333;
-    display: flex;
-    flex-direction: column; /* Stack container and display area */
-    align-items: center;
-    min-height: 100vh;
+/*
+Minimal custom CSS per Bootstrap standards.
+- Retained only for non-standard elements like large RSVP text size and transitions.
+- Used OOCSS with "custom-" prefixed classes for overrides.
+- All other styles moved to Bootstrap utilities/classes in HTML.
+*/
+
+/* Custom RSVP display (leverages Bootstrap but overrides font size for large display) */
+.custom-rsvp-text {
+  font-size: 5em; /* Bootstrap fs-1+ too small; this matches original */
+  max-width: 90vw; /* Max width to prevent breakage */
+  word-wrap: break-word; /* Prevent long chunks from overflowing (leverages Bootstrap's fold) */
 }
 
-h1 {
-    color: #2c3e50;
+/* Custom app container (avoids Bootstrap .container conflicts; overrides for white background and shadow) */
+.custom-app-container {
+  transition: opacity 0.3s ease; /* Smooth show/hide (leverages Bootstrap's transitions) */
+  visibility: visible;
+  opacity: 1;
 }
 
-textarea {
-    width: 95%;
-    height: 150px;
-    padding: 10px;
-    margin-bottom: 15px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1em;
+.custom-app-container.invisible {
+  opacity: 0;
+  visibility: hidden;
 }
 
-.controls p {
-    margin: 5px 0;
-    font-size: 0.9em;
-}
-
-.controls input[type="number"] {
-    width: 60px;
-    padding: 5px;
-    margin-left: 5px;
-}
-
-button {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 1em;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-button:hover {
-    background-color: #2980b9;
-}
-
-
-#container {
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    margin-top: 20px;
-    visibility: visible;
-    opacity: 1;
-    width: 80%;
-    max-width: 600px;
-    text-align: center;
-}
-
-#container.invisible {
-    opacity: 0;
-    visibility: hidden;
-}
-
+/* Custom RSVP display visibility (builds on Bootstrap for overlay effect) */
 #rsvpDisplay {
-    position: fixed; /* Or absolute if body is relative and full height */
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: rgba(200, 200, 200, 0.95); /* Light overlay to focus on text */
-    font-family: Georgia, serif;
-    font-size: 5em; /* Large font */
-    color: #1a1a1a;
-    text-align: center;
-    visibility: hidden; /* Hidden initially */
-    opacity: 0;
-    transition: visibility 0s, opacity 0.3s linear;
-    z-index: 1000; /* Make sure it's on top */
+  visibility: hidden; /* Hidden by default to avoid covering the input form */
+  opacity: 0; /* Fully transparent by default */
+  transition: opacity 0.3s ease; /* Smooth fade for overlay */
 }
 
 #rsvpDisplay.visible {
-    visibility: visible;
-    opacity: 1;
-}
-
-#rsvpText {
-    max-width: 90vw; /* Prevent super long words from breaking layout badly */
-    word-wrap: break-word; /* Should not be needed due to chunking */
+  visibility: visible;
+  opacity: 1;
 }
