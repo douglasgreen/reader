@@ -7,31 +7,31 @@ Minimal custom CSS per Bootstrap standards.
 
 /* Custom RSVP display (leverages Bootstrap but overrides font size for large display) */
 .custom-rsvp-text {
-  font-size: 5em; /* Bootstrap fs-1+ too small; this matches original */
-  max-width: 90vw; /* Max width to prevent breakage */
-  word-wrap: break-word; /* Prevent long chunks from overflowing (leverages Bootstrap's fold) */
+    font-size: 5em; /* Bootstrap fs-1+ too small; this matches original */
+    max-width: 90vw; /* Max width to prevent breakage */
+    word-wrap: break-word; /* Prevent long chunks from overflowing (leverages Bootstrap's fold) */
 }
 
 /* Custom app container (avoids Bootstrap .container conflicts; overrides for white background and shadow) */
 .custom-app-container {
-  transition: opacity 0.3s ease; /* Smooth show/hide (leverages Bootstrap's transitions) */
-  visibility: visible;
-  opacity: 1;
+    transition: opacity 0.3s ease; /* Smooth show/hide (leverages Bootstrap's transitions) */
+    visibility: visible;
+    opacity: 1;
 }
 
 .custom-app-container.invisible {
-  opacity: 0;
-  visibility: hidden;
+    opacity: 0;
+    visibility: hidden;
 }
 
 /* Custom RSVP display visibility (builds on Bootstrap for overlay effect) */
 #rsvpDisplay {
-  visibility: hidden; /* Hidden by default to avoid covering the input form */
-  opacity: 0; /* Fully transparent by default */
-  transition: opacity 0.3s ease; /* Smooth fade for overlay */
+    visibility: hidden; /* Hidden by default to avoid covering the input form */
+    opacity: 0; /* Fully transparent by default */
+    transition: opacity 0.3s ease; /* Smooth fade for overlay */
 }
 
 #rsvpDisplay.visible {
-  visibility: visible;
-  opacity: 1;
+    visibility: visible;
+    opacity: 1;
 }

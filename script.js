@@ -1,12 +1,12 @@
 // Configuration Constants (centralized and immutable)
 const CONFIG = Object.freeze({
-  API_BASE_URL: '/api/v1',  // Placeholder; not used in current code but prepared
-  MAX_CHUNK_LENGTH: 19,
-  DELAY_BETWEEN_LINES: 1000,
-  DEFAULT_WPM: 400,
-  MIN_WPM_LIMIT: 50,
-  MAX_WPM_LIMIT: 2000,
-  WPM_STEP: 25
+    API_BASE_URL: '/api/v1', // Placeholder; not used in current code but prepared
+    MAX_CHUNK_LENGTH: 19,
+    DELAY_BETWEEN_LINES: 1000,
+    DEFAULT_WPM: 400,
+    MIN_WPM_LIMIT: 50,
+    MAX_WPM_LIMIT: 2000,
+    WPM_STEP: 25,
 });
 
 const DALE_CHALL_WORDS = new Set([
@@ -2923,7 +2923,7 @@ const DALE_CHALL_WORDS = new Set([
     'yours',
     'yourself',
     'yourselves',
-    'youth'
+    'youth',
 ]);
 
 /**
@@ -2933,11 +2933,11 @@ const DALE_CHALL_WORDS = new Set([
  * @throws {TypeError} If WPM is invalid.
  */
 function calculateDelayPerCharacter(wordsPerMinute) {
-  if (typeof wordsPerMinute !== 'number' || wordsPerMinute <= 0) {
-    throw new TypeError('wordsPerMinute must be a positive number');
-  }
-  const delayPerWord = (60 * 1000) / wordsPerMinute;
-  return delayPerWord / 6;  // Assumes average 5 letters + space
+    if (typeof wordsPerMinute !== 'number' || wordsPerMinute <= 0) {
+        throw new TypeError('wordsPerMinute must be a positive number');
+    }
+    const delayPerWord = (60 * 1000) / wordsPerMinute;
+    return delayPerWord / 6; // Assumes average 5 letters + space
 }
 
 /**
@@ -2946,8 +2946,8 @@ function calculateDelayPerCharacter(wordsPerMinute) {
  * @returns {number} Total word count.
  */
 function countTotalWords(text) {
-  if (!text || text.trim() === '') return 0;
-  return text.split(/\s+/).filter(word => word.length > 0).length;
+    if (!text || text.trim() === '') return 0;
+    return text.split(/\s+/).filter((word) => word.length > 0).length;
 }
 
 /**
@@ -2957,18 +2957,18 @@ function countTotalWords(text) {
  * @param {HTMLElement} element - DOM element to update.
  */
 function updateEstimatedTime(totalWords, wordsPerMinute, element) {
-  if (totalWords === 0 || wordsPerMinute <= 0) {
-    element.textContent = 'Estimated reading time: --';
-    return;
-  }
-  const timeInMinutes = totalWords / wordsPerMinute;
-  const totalSeconds = Math.round(timeInMinutes * 60);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  let timeString = 'Estimated reading time: ';
-  if (minutes > 0) timeString += `${minutes} min `;
-  if (seconds > 0 || minutes === 0) timeString += `${seconds} sec`;
-  element.textContent = timeString.trim();
+    if (totalWords === 0 || wordsPerMinute <= 0) {
+        element.textContent = 'Estimated reading time: --';
+        return;
+    }
+    const timeInMinutes = totalWords / wordsPerMinute;
+    const totalSeconds = Math.round(timeInMinutes * 60);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    let timeString = 'Estimated reading time: ';
+    if (minutes > 0) timeString += `${minutes} min `;
+    if (seconds > 0 || minutes === 0) timeString += `${seconds} sec`;
+    element.textContent = timeString.trim();
 }
 
 /**
@@ -2977,16 +2977,19 @@ function updateEstimatedTime(totalWords, wordsPerMinute, element) {
  * @returns {string} Score as a string.
  */
 function calculateFleschReadingEase(text) {
-  const sentences = text.split(/[.!?]+/).filter(Boolean);
-  const totalSentences = sentences.length || 1;
-  const words = text.match(/\b\w+\b/g) || [];
-  const totalWords = words.length || 1;
-  let totalSyllables = 0;
-  for (const word of words) {
-    totalSyllables += countSyllables(word);
-  }
-  const freScore = 206.835 - 1.015 * (totalWords / totalSentences) - 84.6 * (totalSyllables / totalWords);
-  return freScore.toFixed(2);
+    const sentences = text.split(/[.!?]+/).filter(Boolean);
+    const totalSentences = sentences.length || 1;
+    const words = text.match(/\b\w+\b/g) || [];
+    const totalWords = words.length || 1;
+    let totalSyllables = 0;
+    for (const word of words) {
+        totalSyllables += countSyllables(word);
+    }
+    const freScore =
+        206.835 -
+        1.015 * (totalWords / totalSentences) -
+        84.6 * (totalSyllables / totalWords);
+    return freScore.toFixed(2);
 }
 
 /**
@@ -2995,11 +2998,12 @@ function calculateFleschReadingEase(text) {
  * @param {number} score - Flesch score.
  */
 function recommendReadingSpeed(text, score) {
-  if (text.length < 100) return;
-  console.log(`Flesch Reading Ease score: ${score}`);
-  const adjusted = 5.6 * parseFloat(score) + 220;
-  const recommended = Math.round(adjusted / CONFIG.WPM_STEP) * CONFIG.WPM_STEP;
-  console.log(`Recommended reading speed: ${recommended} WPM`);
+    if (text.length < 100) return;
+    console.log(`Flesch Reading Ease score: ${score}`);
+    const adjusted = 5.6 * parseFloat(score) + 220;
+    const recommended =
+        Math.round(adjusted / CONFIG.WPM_STEP) * CONFIG.WPM_STEP;
+    console.log(`Recommended reading speed: ${recommended} WPM`);
 }
 
 /**
@@ -3009,24 +3013,24 @@ function recommendReadingSpeed(text, score) {
  * @returns {Array<string>} Array of chunks.
  */
 function chunkLine(line, maxLength = CONFIG.MAX_CHUNK_LENGTH) {
-  if (!line.trim()) return [];
-  const words = line.split(/\s+/).filter(word => word.length > 0);
-  const chunks = [];
-  let currentChunk = '';
-  for (const word of words) {
-    if (currentChunk.length === 0) {
-      currentChunk = word;
-    } else if (currentChunk.length + 1 + word.length <= maxLength) {
-      currentChunk += ` ${word}`;
-    } else {
-      chunks.push(currentChunk);
-      currentChunk = word;
+    if (!line.trim()) return [];
+    const words = line.split(/\s+/).filter((word) => word.length > 0);
+    const chunks = [];
+    let currentChunk = '';
+    for (const word of words) {
+        if (currentChunk.length === 0) {
+            currentChunk = word;
+        } else if (currentChunk.length + 1 + word.length <= maxLength) {
+            currentChunk += ` ${word}`;
+        } else {
+            chunks.push(currentChunk);
+            currentChunk = word;
+        }
     }
-  }
-  if (currentChunk.length > 0) {
-    chunks.push(currentChunk);
-  }
-  return chunks;
+    if (currentChunk.length > 0) {
+        chunks.push(currentChunk);
+    }
+    return chunks;
 }
 
 /**
@@ -3035,8 +3039,10 @@ function chunkLine(line, maxLength = CONFIG.MAX_CHUNK_LENGTH) {
  * @returns {Array<Array<string>>} Array of lines, each with chunks.
  */
 function processText(rawText) {
-  const lines = rawText.split('\n');
-  return lines.map(line => chunkLine(line)).filter(chunks => chunks.length > 0);
+    const lines = rawText.split('\n');
+    return lines
+        .map((line) => chunkLine(line))
+        .filter((chunks) => chunks.length > 0);
 }
 
 // Memoized syllable counter for performance
@@ -3048,286 +3054,350 @@ const syllableCache = new Map();
  * @returns {number} Syllable count.
  */
 function countSyllables(word) {
-  if (syllableCache.has(word)) return syllableCache.get(word);
-  word = word.toLowerCase();
-  if (word.length <= 3) {
-    syllableCache.set(word, 1);
-    return 1;
-  }
-  word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
-  word = word.replace(/^y/, '');
-  const syllableMatches = word.match(/[aeiouy]{1,2}/g);
-  const count = syllableMatches ? syllableMatches.length : 1;
-  syllableCache.set(word, count);
-  return count;
+    if (syllableCache.has(word)) return syllableCache.get(word);
+    word = word.toLowerCase();
+    if (word.length <= 3) {
+        syllableCache.set(word, 1);
+        return 1;
+    }
+    word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
+    word = word.replace(/^y/, '');
+    const syllableMatches = word.match(/[aeiouy]{1,2}/g);
+    const count = syllableMatches ? syllableMatches.length : 1;
+    syllableCache.set(word, count);
+    return count;
 }
 // State class for managing application state immutably
 class ReadingState {
-  constructor(processedLines = [], lineIndex = 0, chunkIndex = 0, isPlaying = false) {
-    this.processedLines = [...processedLines];
-    this.lineIndex = lineIndex;
-    this.chunkIndex = chunkIndex;
-    this.isPlaying = isPlaying;
-  }
+    constructor(
+        processedLines = [],
+        lineIndex = 0,
+        chunkIndex = 0,
+        isPlaying = false,
+    ) {
+        this.processedLines = [...processedLines];
+        this.lineIndex = lineIndex;
+        this.chunkIndex = chunkIndex;
+        this.isPlaying = isPlaying;
+    }
 
-  static updateChunkIndex(newState, increment = true) {
-    const delta = increment ? 1 : -1;
-    const newIndex = newState.chunkIndex + delta;
-    if (newIndex < 0) return newState;  // Prevent negative
-    return new ReadingState(newState.processedLines, newState.lineIndex, newIndex, newState.isPlaying);
-  }
+    static updateChunkIndex(newState, increment = true) {
+        const delta = increment ? 1 : -1;
+        const newIndex = newState.chunkIndex + delta;
+        if (newIndex < 0) return newState; // Prevent negative
+        return new ReadingState(
+            newState.processedLines,
+            newState.lineIndex,
+            newIndex,
+            newState.isPlaying,
+        );
+    }
 
-  static updateLineIndex(newState, increment = true) {
-    const delta = increment ? 1 : -1;
-    const newIndex = newState.lineIndex + delta;
-    if (newIndex < 0 || newIndex >= newState.processedLines.length) return newState;  // Bounds check
-    return new ReadingState(newState.processedLines, newIndex, 0, newState.isPlaying);
-  }
+    static updateLineIndex(newState, increment = true) {
+        const delta = increment ? 1 : -1;
+        const newIndex = newState.lineIndex + delta;
+        if (newIndex < 0 || newIndex >= newState.processedLines.length)
+            return newState; // Bounds check
+        return new ReadingState(
+            newState.processedLines,
+            newIndex,
+            0,
+            newState.isPlaying,
+        );
+    }
 
-  static setPlaying(newState, isPlaying) {
-    return new ReadingState(newState.processedLines, newState.lineIndex, newState.chunkIndex, isPlaying);
-  }
+    static setPlaying(newState, isPlaying) {
+        return new ReadingState(
+            newState.processedLines,
+            newState.lineIndex,
+            newState.chunkIndex,
+            isPlaying,
+        );
+    }
 }
 
 // Handler class for DOM interactions and logic
 class RsvpApp {
-  constructor() {
-    this.state = new ReadingState();
-    this.timerId = null;
-    this.wordsPerMinute = CONFIG.DEFAULT_WPM;
-    this.elements = this.initializeElements();
-    this.bindEvents();
-    this.setupInitialDisplay();
-  }
-
-
-  initializeElements() {
-    try {
-      return {
-        textInput: document.getElementById('textInput'),
-        processButton: document.getElementById('processButton'),
-        rsvpDisplay: document.getElementById('rsvpDisplay'),
-        rsvpText: document.getElementById('rsvpText'),
-        wpmInput: document.getElementById('wpmInput'),
-        estimatedTime: document.getElementById('estimatedTime'),
-        container: document.querySelector('.custom-app-container')  // Updated to match new class
-      };
-    } catch (error) {
-      console.error('Error initializing DOM elements:', error);
-      throw new Error('Required DOM elements not found');
+    constructor() {
+        this.state = new ReadingState();
+        this.timerId = null;
+        this.wordsPerMinute = CONFIG.DEFAULT_WPM;
+        this.elements = this.initializeElements();
+        this.bindEvents();
+        this.setupInitialDisplay();
     }
-  }
 
-  bindEvents() {
-    this.elements.processButton.addEventListener('click', () => this.processAndStart());
-    this.elements.textInput.addEventListener('input', () => this.onTextInput());
-    this.elements.wpmInput.addEventListener('change', () => this.updateWpm());
-    document.addEventListener('keydown', (event) => this.handleKeydown(event));
-  }
+    initializeElements() {
+        try {
+            return {
+                textInput: document.getElementById('textInput'),
+                processButton: document.getElementById('processButton'),
+                rsvpDisplay: document.getElementById('rsvpDisplay'),
+                rsvpText: document.getElementById('rsvpText'),
+                wpmInput: document.getElementById('wpmInput'),
+                estimatedTime: document.getElementById('estimatedTime'),
+                container: document.querySelector('.custom-app-container'), // Updated to match new class
+            };
+        } catch (error) {
+            console.error('Error initializing DOM elements:', error);
+            throw new Error('Required DOM elements not found');
+        }
+    }
 
-  setupInitialDisplay() {
-    this.elements.rsvpText.textContent = '[Enter text and press "Prepare Text" or Space]';
-    this.validateAndSetWpm(CONFIG.DEFAULT_WPM);
-  }
+    bindEvents() {
+        this.elements.processButton.addEventListener('click', () =>
+            this.processAndStart(),
+        );
+        this.elements.textInput.addEventListener('input', () =>
+            this.onTextInput(),
+        );
+        this.elements.wpmInput.addEventListener('change', () =>
+            this.updateWpm(),
+        );
+        document.addEventListener('keydown', (event) =>
+            this.handleKeydown(event),
+        );
+    }
 
-  onTextInput() {
-    this.updateEstimatedTime();
-    const score = calculateFleschReadingEase(this.elements.textInput.value);
-    recommendReadingSpeed(this.elements.textInput.value, score);
-  }
+    setupInitialDisplay() {
+        this.elements.rsvpText.textContent =
+            '[Enter text and press "Prepare Text" or Space]';
+        this.validateAndSetWpm(CONFIG.DEFAULT_WPM);
+    }
 
-  updateWpm() {
-    const newWpm = parseInt(this.elements.wpmInput.value, 10);
-    this.validateAndSetWpm(newWpm);
-  }
+    onTextInput() {
+        this.updateEstimatedTime();
+        const score = calculateFleschReadingEase(this.elements.textInput.value);
+        recommendReadingSpeed(this.elements.textInput.value, score);
+    }
 
-  validateAndSetWpm(newWpm) {
-    const clampedWpm = Math.max(CONFIG.MIN_WPM_LIMIT, Math.min(newWpm || this.wordsPerMinute, CONFIG.MAX_WPM_LIMIT));
-    if (clampedWpm !== this.wordsPerMinute || this.elements.wpmInput.value !== '' + clampedWpm) {
-      this.wordsPerMinute = clampedWpm;
-      this.elements.wpmInput.value = '' + clampedWpm;
-      this.updateEstimatedTime();
-      console.log('WPM set to:', this.wordsPerMinute);
-      if (this.state.isPlaying) {
-        this.stopReading();
+    updateWpm() {
+        const newWpm = parseInt(this.elements.wpmInput.value, 10);
+        this.validateAndSetWpm(newWpm);
+    }
+
+    validateAndSetWpm(newWpm) {
+        const clampedWpm = Math.max(
+            CONFIG.MIN_WPM_LIMIT,
+            Math.min(newWpm || this.wordsPerMinute, CONFIG.MAX_WPM_LIMIT),
+        );
+        if (
+            clampedWpm !== this.wordsPerMinute ||
+            this.elements.wpmInput.value !== '' + clampedWpm
+        ) {
+            this.wordsPerMinute = clampedWpm;
+            this.elements.wpmInput.value = '' + clampedWpm;
+            this.updateEstimatedTime();
+            console.log('WPM set to:', this.wordsPerMinute);
+            if (this.state.isPlaying) {
+                this.stopReading();
+                this.startReading();
+            }
+        }
+    }
+
+    updateEstimatedTime() {
+        const totalWords = countTotalWords(this.elements.textInput.value);
+        updateEstimatedTime(
+            totalWords,
+            this.wordsPerMinute,
+            this.elements.estimatedTime,
+        );
+    }
+
+    processAndStart() {
+        const processed = processText(this.elements.textInput.value);
+        this.state = new ReadingState(processed, 0, 0, false);
+        this.displayChunk();
         this.startReading();
-      }
     }
-  }
 
-  updateEstimatedTime() {
-    const totalWords = countTotalWords(this.elements.textInput.value);
-    updateEstimatedTime(totalWords, this.wordsPerMinute, this.elements.estimatedTime);
-  }
-
-  processAndStart() {
-    const processed = processText(this.elements.textInput.value);
-    this.state = new ReadingState(processed, 0, 0, false);
-    this.displayChunk();
-    this.startReading();
-  }
-
-  displayChunk() {
-    if (this.state.processedLines.length === 0) {
-      this.elements.rsvpText.textContent = '[No text processed]';
-      this.toggleVisibility(false);
-      return;
+    displayChunk() {
+        if (this.state.processedLines.length === 0) {
+            this.elements.rsvpText.textContent = '[No text processed]';
+            this.toggleVisibility(false);
+            return;
+        }
+        if (this.state.lineIndex >= this.state.processedLines.length) {
+            this.elements.rsvpText.textContent = '[End of Text]';
+            this.toggleVisibility(false);
+            return;
+        }
+        const currentChunks = this.state.processedLines[this.state.lineIndex];
+        const chunk = currentChunks[this.state.chunkIndex] || '[Invalid Chunk]';
+        this.elements.rsvpText.textContent = chunk;
+        this.toggleVisibility(true);
     }
-    if (this.state.lineIndex >= this.state.processedLines.length) {
-      this.elements.rsvpText.textContent = '[End of Text]';
-      this.toggleVisibility(false);
-      return;
-    }
-    const currentChunks = this.state.processedLines[this.state.lineIndex];
-    const chunk = currentChunks[this.state.chunkIndex] || '[Invalid Chunk]';
-    this.elements.rsvpText.textContent = chunk;
-    this.toggleVisibility(true);
-  }
 
-  toggleVisibility(isVisible) {
-    const { rsvpDisplay, container } = this.elements;
-    if (isVisible) {
-      rsvpDisplay.classList.add('visible');
-      container.classList.add('invisible');
-    } else {
-      rsvpDisplay.classList.remove('visible');
-      container.classList.remove('invisible');
+    toggleVisibility(isVisible) {
+        const { rsvpDisplay, container } = this.elements;
+        if (isVisible) {
+            rsvpDisplay.classList.add('visible');
+            container.classList.add('invisible');
+        } else {
+            rsvpDisplay.classList.remove('visible');
+            container.classList.remove('invisible');
+        }
     }
-  }
 
-  startReading() {
-    if (this.state.isPlaying || this.state.processedLines.length === 0) return;
-    this.state = ReadingState.setPlaying(this.state, true);
-    this.playNextChunk();
-  }
-
-  stopReading() {
-    this.state = ReadingState.setPlaying(this.state, false);
-    if (this.timerId) {
-      clearTimeout(this.timerId);
-      this.timerId = null;
-    }
-    const percentDone = (this.state.lineIndex / this.state.processedLines.length) * 100;
-    console.log(`${percentDone.toFixed(1)}% done`);
-  }
-
-  playNextChunk() {
-    if (!this.state.isPlaying) return;
-    if (this.state.lineIndex >= this.state.processedLines.length) {
-      this.elements.rsvpText.textContent = '[End of Text]';
-      this.stopReading();
-      return;
-    }
-    const currentLine = this.state.processedLines[this.state.lineIndex];
-    if (this.state.chunkIndex >= currentLine.length) {
-      this.state = ReadingState.updateLineIndex(this.state, true);
-      this.state = ReadingState.setPlaying(this.state, false);  // Pausing for line delay
-      this.timerId = setTimeout(() => {
+    startReading() {
+        if (this.state.isPlaying || this.state.processedLines.length === 0)
+            return;
         this.state = ReadingState.setPlaying(this.state, true);
         this.playNextChunk();
-      }, CONFIG.DELAY_BETWEEN_LINES);
-      return;
     }
-    const chunk = currentLine[this.state.chunkIndex];
-    this.elements.rsvpText.textContent = chunk;
-    const weight = this.calculateWeight(chunk);
-    const delay = weight * calculateDelayPerCharacter(this.wordsPerMinute);
-    this.state = ReadingState.updateChunkIndex(this.state, true);
-    this.timerId = setTimeout(() => this.playNextChunk(), delay);
-  }
 
-  calculateWeight(chunk) {
-    let weight = chunk.length;
-    if (/[.?!]/.test(chunk)) weight += 5;
-    if (/[,;:]/.test(chunk)) weight += 3;
-    const words = chunk.match(/\b[a-zA-Z0-9]+\b/g) || [];
-    for (const word of words) {
-      const lowWord = word.toLowerCase();
-      if (DALE_CHALL_WORDS.has(lowWord)) continue;
-      if (/[0-9]/.test(word)) {
-        weight += word.length;
-      } else {
-        let wordWeight = countSyllables(word);
-        if (lowWord !== word) wordWeight *= 2;
-        weight += wordWeight;
-      }
+    stopReading() {
+        this.state = ReadingState.setPlaying(this.state, false);
+        if (this.timerId) {
+            clearTimeout(this.timerId);
+            this.timerId = null;
+        }
+        const percentDone =
+            (this.state.lineIndex / this.state.processedLines.length) * 100;
+        console.log(`${percentDone.toFixed(1)}% done`);
     }
-    return weight;
-  }
 
-  navigateBackward() {
-    this.stopReading();
-    if (this.state.chunkIndex > 0) {
-      this.state = ReadingState.updateChunkIndex(this.state, false);
-    } else if (this.state.lineIndex > 0) {
-      this.state = ReadingState.updateLineIndex(this.state, false);
+    playNextChunk() {
+        if (!this.state.isPlaying) return;
+        if (this.state.lineIndex >= this.state.processedLines.length) {
+            this.elements.rsvpText.textContent = '[End of Text]';
+            this.stopReading();
+            return;
+        }
+        const currentLine = this.state.processedLines[this.state.lineIndex];
+        if (this.state.chunkIndex >= currentLine.length) {
+            this.state = ReadingState.updateLineIndex(this.state, true);
+            this.state = ReadingState.setPlaying(this.state, false); // Pausing for line delay
+            this.timerId = setTimeout(() => {
+                this.state = ReadingState.setPlaying(this.state, true);
+                this.playNextChunk();
+            }, CONFIG.DELAY_BETWEEN_LINES);
+            return;
+        }
+        const chunk = currentLine[this.state.chunkIndex];
+        this.elements.rsvpText.textContent = chunk;
+        const weight = this.calculateWeight(chunk);
+        const delay = weight * calculateDelayPerCharacter(this.wordsPerMinute);
+        this.state = ReadingState.updateChunkIndex(this.state, true);
+        this.timerId = setTimeout(() => this.playNextChunk(), delay);
     }
-    this.displayChunk();
-  }
 
-  navigateForward() {
-    this.stopReading();
-    if (this.state.lineIndex < this.state.processedLines.length - 1) {
-      this.state = ReadingState.updateLineIndex(this.state, true);
-    } else {
-      const lastLine = this.state.processedLines[this.state.lineIndex];
-      this.state = ReadingState.updateChunkIndex(new ReadingState(
-        this.state.processedLines, this.state.lineIndex, Math.max(lastLine.length - 1, 0), this.state.isPlaying
-      ), false);  // Don't increment, just set to last
+    calculateWeight(chunk) {
+        let weight = chunk.length;
+        if (/[.?!]/.test(chunk)) weight += 5;
+        if (/[,;:]/.test(chunk)) weight += 3;
+        const words = chunk.match(/\b[a-zA-Z0-9]+\b/g) || [];
+        for (const word of words) {
+            const lowWord = word.toLowerCase();
+            if (DALE_CHALL_WORDS.has(lowWord)) continue;
+            if (/[0-9]/.test(word)) {
+                weight += word.length;
+            } else {
+                let wordWeight = countSyllables(word);
+                if (lowWord !== word) wordWeight *= 2;
+                weight += wordWeight;
+            }
+        }
+        return weight;
     }
-    this.displayChunk();
-  }
 
-  handleKeydown(event) {
-    const isInputFocused = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName);
-    if (event.key === ' ') {
-      if (!isInputFocused || this.elements.rsvpDisplay.classList.contains('visible')) {
-        event.preventDefault();
-        this.togglePlayPause();
-      }
-    } else if (event.key === 'ArrowLeft') {
-      if (!isInputFocused || this.elements.rsvpDisplay.classList.contains('visible')) {
-        event.preventDefault();
-        this.navigateBackward();
-      }
-    } else if (event.key === 'ArrowRight') {
-      if (!isInputFocused || this.elements.rsvpDisplay.classList.contains('visible')) {
-        event.preventDefault();
-        this.navigateForward();
-      }
-    } else if (event.key === 'ArrowUp') {
-      if (!isInputFocused || this.elements.rsvpDisplay.classList.contains('visible')) {
-        event.preventDefault();
-        this.updateWpmValue(+CONFIG.WPM_STEP);
-      }
-    } else if (event.key === 'ArrowDown') {
-      if (!isInputFocused || this.elements.rsvpDisplay.classList.contains('visible')) {
-        event.preventDefault();
-        this.updateWpmValue(-CONFIG.WPM_STEP);
-      }
-    } else if (event.key === 'Escape') {
-      if (this.elements.rsvpDisplay.classList.contains('visible')) {
-        event.preventDefault();
+    navigateBackward() {
         this.stopReading();
-        this.toggleVisibility(false);
-      }
+        if (this.state.chunkIndex > 0) {
+            this.state = ReadingState.updateChunkIndex(this.state, false);
+        } else if (this.state.lineIndex > 0) {
+            this.state = ReadingState.updateLineIndex(this.state, false);
+        }
+        this.displayChunk();
     }
-  }
 
-  togglePlayPause() {
-    if (this.state.isPlaying) {
-      this.stopReading();
-    } else {
-      this.startReading();
+    navigateForward() {
+        this.stopReading();
+        if (this.state.lineIndex < this.state.processedLines.length - 1) {
+            this.state = ReadingState.updateLineIndex(this.state, true);
+        } else {
+            const lastLine = this.state.processedLines[this.state.lineIndex];
+            this.state = ReadingState.updateChunkIndex(
+                new ReadingState(
+                    this.state.processedLines,
+                    this.state.lineIndex,
+                    Math.max(lastLine.length - 1, 0),
+                    this.state.isPlaying,
+                ),
+                false,
+            ); // Don't increment, just set to last
+        }
+        this.displayChunk();
     }
-  }
 
-  updateWpmValue(delta) {
-    this.validateAndSetWpm(this.wordsPerMinute + delta);
-  }
+    handleKeydown(event) {
+        const isInputFocused = ['INPUT', 'TEXTAREA'].includes(
+            document.activeElement?.tagName,
+        );
+        if (event.key === ' ') {
+            if (
+                !isInputFocused ||
+                this.elements.rsvpDisplay.classList.contains('visible')
+            ) {
+                event.preventDefault();
+                this.togglePlayPause();
+            }
+        } else if (event.key === 'ArrowLeft') {
+            if (
+                !isInputFocused ||
+                this.elements.rsvpDisplay.classList.contains('visible')
+            ) {
+                event.preventDefault();
+                this.navigateBackward();
+            }
+        } else if (event.key === 'ArrowRight') {
+            if (
+                !isInputFocused ||
+                this.elements.rsvpDisplay.classList.contains('visible')
+            ) {
+                event.preventDefault();
+                this.navigateForward();
+            }
+        } else if (event.key === 'ArrowUp') {
+            if (
+                !isInputFocused ||
+                this.elements.rsvpDisplay.classList.contains('visible')
+            ) {
+                event.preventDefault();
+                this.updateWpmValue(+CONFIG.WPM_STEP);
+            }
+        } else if (event.key === 'ArrowDown') {
+            if (
+                !isInputFocused ||
+                this.elements.rsvpDisplay.classList.contains('visible')
+            ) {
+                event.preventDefault();
+                this.updateWpmValue(-CONFIG.WPM_STEP);
+            }
+        } else if (event.key === 'Escape') {
+            if (this.elements.rsvpDisplay.classList.contains('visible')) {
+                event.preventDefault();
+                this.stopReading();
+                this.toggleVisibility(false);
+            }
+        }
+    }
+
+    togglePlayPause() {
+        if (this.state.isPlaying) {
+            this.stopReading();
+        } else {
+            this.startReading();
+        }
+    }
+
+    updateWpmValue(delta) {
+        this.validateAndSetWpm(this.wordsPerMinute + delta);
+    }
 }
 
 // Initialize app on DOM load
 document.addEventListener('DOMContentLoaded', () => {
-  new RsvpApp();
+    new RsvpApp();
 });

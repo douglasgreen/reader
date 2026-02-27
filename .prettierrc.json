@@ -11,7 +11,6 @@
   "endOfLine": "lf",
   "htmlWhitespaceSensitivity": "css",
   "vueIndentScriptAndStyle": false,
-  "plugins": ["prettier-plugin-sh", "prettier-plugin-sql"],
   "overrides": [
     {
       "files": ["*.html", "*.htm"],
@@ -38,26 +37,6 @@
       "options": {
         "tabWidth": 2,
         "singleQuote": false
-      }
-    },
-    {
-      "files": "*.sh",
-      "options": {
-        "parser": "sh"
-      }
-    },
-    {
-      "files": "*.sql",
-      "options": {
-        "parser": "sql",
-        "language": "mysql",
-        "tabWidth": 4,
-        "keywordCase": "upper",
-        "dataTypeCase": "upper",
-        "identifierCase": "lower",
-        "printWidth": 120,
-        "expressionWidth": 120,
-        "linesBetweenQueries": 2
       }
     }
   ]
